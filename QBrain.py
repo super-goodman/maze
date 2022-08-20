@@ -19,7 +19,7 @@ class QLearning:
             # choose best action
             
             state_action = self.qTable.loc[observation, :]
-            print("-----------------",observation,"+++++",state_action,"---------------")
+            #print("-----------------",observation,"+++++",state_action,"---------------")
             # some actions may have the same value, randomly choose on in these actions
             action = np.random.choice(state_action[state_action == np.max(state_action)].index)
         else:
@@ -30,7 +30,7 @@ class QLearning:
     def learn(self, s, a, r, s_):
         self.check_state_exist(s_)  
         qPredict = self.qTable.loc[s, a]
-        print(qPredict)
+        #print(qPredict)
         if s_ != 'terminal':
             qTarget = r + self.gamma * self.qTable.loc[s_, :].max()  # next state is not terminal
         else:

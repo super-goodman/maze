@@ -30,7 +30,7 @@ class Maze(tk.Tk, object):
         self.geometry('{0}x{1}'.format(MAZE_H * UNIT, MAZE_H * UNIT))
         self.caveList = []
         self.buildMaze()
-
+        self.showPath = True
 
     # read json file
     def readJson(self):
@@ -113,6 +113,7 @@ class Maze(tk.Tk, object):
         elif action == 3:   # left
             if s[0] > UNIT:
                 baseAction[0] -= UNIT
+
         self.canvas.move(self.rect, baseAction[0], baseAction[1])  # move agent
         s_ = self.canvas.coords(self.rect)  # next state
 

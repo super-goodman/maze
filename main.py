@@ -5,11 +5,15 @@ import time
 
 
 def update():
+    count = 0 # timer count
     for episode in range(10000):
         # initial observation
         observation = env.reset()  # coordinatoin of agent
         R = 0  # reward
+        time_start = time.time()
+        print("-------------------------------------------------------------%d" %episode)
         while True:
+     
             # update 
             env.render()
 
@@ -25,16 +29,20 @@ def update():
             # swap observation
             observation = observation_
             
-            #print("-------------------------------------------------------------%d" %episode)
-            if episode <3:
+
+            if episode > 9000 or count >= 20 :
                 time.sleep(0.1)
-            if episode >950:            
-                    time.sleep(0.1)
             R = R + reward  # add all rewards
 
             # break while loop when end of this episode
             if done:
-                print(R)  # show every turn's reward
+                #slow down when find a best way
+  
+                if (time.time()-time_start) < 5 and R >= 80:
+                    count += 1
+                else:
+                    count = 0
+                print("reward = %d,time = %d"%(R,count))  # show every turn's reward
                 break
 
 
