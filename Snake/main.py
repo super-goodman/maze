@@ -1,6 +1,12 @@
 import numpy as np
 import pickle
 import pygame as pg
+
+# start to use a library pygame, but tkinter is enough
+# snake needs a huge table to store states
+# however, it is still much easier than chess, because it only has 4 actions in one time
+
+#Time is running, so no module, just write.
 SW = 800
 SH = 800
 SIZE = 10
@@ -83,7 +89,6 @@ class Treat:
         self.x = np.random.randint(0, SIZE)
         self.y = np.random.randint(0, SIZE)
     def draw(self, window):
-
         pg.draw.rect(window, (0, 255, 255), (self.x * SCALING, self.y * SCALING, SCALING, SCALING))
 
 
@@ -103,7 +108,7 @@ if __name__ == "__main__":
                         for ub in range(2):
                             for db in range(2):
                                 for direction in range(4):
-                                    qTable[(xtf, ytf), lb, rb, ub, db, direction] = np.random.uniform(-8, 0, size=4)     #随机数Q表
+                                    qTable[(xtf, ytf), lb, rb, ub, db, direction] = np.random.uniform(-8, 0, size=4)     #init table
 
     epochRewards = []
     suicides = 0
@@ -145,27 +150,27 @@ if __name__ == "__main__":
             render = False
         epochRew = 0
         for i in range(STEPS + render * 1000):
-            left_b = 0
-            right_b = 0
-            up_b = 0
-            down_b = 0
+            leftB = 0
+            rightB = 0
+            upB = 0
+            downB = 0
 
             for part in python.body:
 
-                if part == (python.x - 1, python.y):                       # x-1 srands go ledt
-                    left_b = 1
+                if part == (python.x - 1, python.y):                       # x-1 stands go left
+                    leftB = 1
                 elif python.x - 1 < 0 and part == (SIZE - 1, python.y):    # go through the left edge
-                    left_b = 1
+                    leftB = 1
                 if part == ((python.x + 1) % SIZE, python.y):
-                    right_b = 1
+                    rightB = 1
                 if part == (python.x, python.y - 1):
-                    up_b = 1
+                    upB = 1
                 elif python.y - 1 < 0 and part == (python.x, SIZE - 1):
-                    up_b = 1
+                    upB = 1
                 if part == (python.x, (python.y + 1) % SIZE):
-                    down_b = 1
+                    downB = 1
 
-            obs = ((python.x - food.x, python.y - food.y), left_b, right_b, up_b, down_b, python.dir)  # index of current movement
+            obs = ((python.x - food.x, python.y - food.y), leftB, rightB, upB, downB, python.dir)  # index of current movement
             if np.random.random() > EPS:
                 action = np.argmax(qTable[obs])                 # max index
 
@@ -202,7 +207,7 @@ if __name__ == "__main__":
 
                 if reward == 0:
                     reward = -MOVE_PENALTY
-            newObservation = ((python.x - food.x, python.y - food.y), left_b, right_b, up_b, down_b, python.dir)
+            newObservation = ((python.x - food.x, python.y - food.y), leftB, rightB, upB, downB, python.dir)
             maxFutureQ = np.max(qTable[newObservation])
             currentQ = qTable[obs][action]
             if reward == EAT_REWARD:
