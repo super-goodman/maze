@@ -22,7 +22,6 @@ LEARNING_RATE = 0.8
 DISCOUNT = 0.99
 FPS = 60
 SCALING = SW // SIZE
-startingQTable = None
 
 class Snake:
     def __init__(self):
@@ -63,13 +62,13 @@ class Snake:
             if i > 0:
                 self.body[-i] = self.body[-i - 1]
 
-    def changeDirection(self, new_dir):
-        if abs(self.dir - new_dir) != 2:
-            self.dir = new_dir
+    def changeDirection(self, Dir_):
+        if abs(self.dir - Dir_) != 2:
+            self.dir = Dir_
 
-    def act(self, new_dir):
-        if new_dir != self.dir:
-            self.changeDirection(new_dir)
+    def act(self, Dir_):
+        if Dir_ != self.dir:
+            self.changeDirection(Dir_)
         self.move()
 
     def draw(self, window):
@@ -81,165 +80,173 @@ class Snake:
          
 
 
-class Treat:
+class Food:
     def __init__(self):
         self.x = np.random.randint(0, SIZE)
         self.y = np.random.randint(0, SIZE)
-    def changePos(self):
-        self.x = np.random.randint(0, SIZE)
-        self.y = np.random.randint(0, SIZE)
+
     def draw(self, window):
         pg.draw.rect(window, (0, 255, 255), (self.x * SCALING, self.y * SCALING, SCALING, SCALING))
 
+    def changePos(self):
+        self.x = np.random.randint(0, SIZE)
+        self.y = np.random.randint(0, SIZE)
 
-if __name__ == "__main__":
-    pg.init()                    # init
-    clock = pg.time.Clock()      # time
-    screen = pg.display.set_mode((SW, SH))  # a window
-    # =========================================================================
-    # observation space is location of food relative to head and is there a body on the left, right or fowards
 
-    if startingQTable is None:
-        qTable = {}
-        for xtf in range(-SIZE + 1, SIZE):
-            for ytf in range(-SIZE + 1, SIZE):
-                for lb in range(2):
-                    for rb in range(2):
-                        for ub in range(2):
-                            for db in range(2):
-                                for direction in range(4):
-                                    qTable[(xtf, ytf), lb, rb, ub, db, direction] = np.random.uniform(-8, 0, size=4)     #init table
 
-    epochRewards = []
-    suicides = 0
-    bestMean = -1000
-    bestQTable = {}
 
-    for epoch in range(EPOCHS + 2):
-        python = Snake()
-        food = Treat()
-        inside = False
+class World:
+    def __init__(self):
+        pg.init()                         # init
+        self.clock = pg.time.Clock()      # time
+        self.screen = pg.display.set_mode((SW, SH))  # a window  
 
+        self.inside = False    # if food inside of the snake
+        self.epochRs = []
+        self.suicides = 0
+        self.bestMean = -1000
+        self.bestQTable = {}
+        self.qTable = {}
+        self.startingQTable = None
+
+
+    def initQTable(self):
+        if self.startingQTable is None: 
+            for xf in range(-SIZE + 1, SIZE):
+                for yf in range(-SIZE + 1, SIZE):
+                    for lb in range(2):
+                        for rb in range(2):
+                            for ub in range(2):
+                                for db in range(2):
+                                    for direction in range(4):
+                                        self.qTable[(xf, yf), lb, rb, ub, db, direction] = np.random.uniform(-8, 0, size=4)     #init table
+
+    def isInside(self):
+        self.inside = False
         # check the food locatoin :if food is inside of the snake
-        for part in python.body:
-            if part == (food.x, food.y):
-                inside = True
+        for part in self.snake.body:
+            if part == (self.food.x, self.food.y):
+                self.inside = True
                 break
 
-            while inside:
-                inside = False
-                food.changePos()
-                for part in python.body:
-                    if part == (food.x, food.y):
-                        inside = True
+            while self.inside:
+                self.inside = False
+                self.food.changePos()
+                for part in self.snake.body:
+                    if part == (self.food.x, self.food.y):
+                        self.inside = True
                         break
 
-        #  print log every 500 times
-        if not epoch % 500:
-            print(f"{epoch}#")
-        if epoch < 2:
-            FPS = 10
-        elif epoch > 2 and epoch <12000:
-            FPS = 60
-        if epoch % SHOW_WHEN == 0:
-            render = True
-            currentMean = np.mean(epochRewards[-SHOW_WHEN:])
-            print(f"#{epoch}, mean: {currentMean}, suicides: {suicides}, epsilon: {EPS}")
-            suicides = 0
-        else:
-            render = False
-        epochRew = 0
-        for i in range(STEPS + render * 1000):
-            leftB = 0
-            rightB = 0
-            upB = 0
-            downB = 0
 
-            for part in python.body:
-
-                if part == (python.x - 1, python.y):                       # x-1 stands go left
-                    leftB = 1
-                elif python.x - 1 < 0 and part == (SIZE - 1, python.y):    # go through the left edge
-                    leftB = 1
-                if part == ((python.x + 1) % SIZE, python.y):
-                    rightB = 1
-                if part == (python.x, python.y - 1):
-                    upB = 1
-                elif python.y - 1 < 0 and part == (python.x, SIZE - 1):
-                    upB = 1
-                if part == (python.x, (python.y + 1) % SIZE):
-                    downB = 1
-
-            obs = ((python.x - food.x, python.y - food.y), leftB, rightB, upB, downB, python.dir)  # index of current movement
-            if np.random.random() > EPS:
-                action = np.argmax(qTable[obs])                 # max index
-
+    def run(self):
+        for epoch in range(EPOCHS):
+            self.snake = Snake()
+            self.food = Food()
+            self.isInside()
+            #  print log every 500 times
+            if not epoch % 500:
+                print(f"{epoch}#")
+            if epoch < 2:
+                FPS = 10
+            elif epoch > 2 and epoch <12000:
+                FPS = 60
+            if epoch % SHOW_WHEN == 0:
+                self.render = True
+                self.currentMean = np.mean(self.epochRs[-SHOW_WHEN:])
+                EPS = 0.8
+                print(f"#{epoch}, mean: {self.currentMean}, self.suicides: {self.suicides}, epsilon: {EPS}")
+                self.suicides = 0
             else:
-                action = np.random.randint(0, 4)
+                self.render = False
+            self.epochRew = 0
 
-            python.act(action)
-            if python.x == food.x and python.y == food.y:
-                python.ate = True
-                food.changePos()
-                reward = EAT_REWARD
-                inside = False
-                for part in python.body:
-                    if part == (food.x, food.y):
-                        inside = True
-                        break
 
-                while inside:
-                    inside = False
-                    food.changePos()
-                    for part in python.body:
-                        if part == (food.x, food.y):
-                            inside = True
+
+            for i in range(STEPS + self.render * 1000):
+                self.left = 0
+                self.right = 0
+                self.up = 0
+                self.down = 0
+
+                for part in self.snake.body:
+
+                    if part == (self.snake.x - 1, self.snake.y):                       # x-1 stands go left
+                        self.left = 1
+                    elif self.snake.x - 1 < 0 and part == (SIZE - 1, self.snake.y):    # go through the left edge
+                        self.left = 1
+                    if part == ((self.snake.x + 1) % SIZE, self.snake.y):
+                        self.right = 1
+                    if part == (self.snake.x, self.snake.y - 1):
+                        self.up = 1
+                    elif self.snake.y - 1 < 0 and part == (self.snake.x, SIZE - 1):
+                        self.up = 1
+                    if part == (self.snake.x, (self.snake.y + 1) % SIZE):
+                        self.down = 1
+
+                self.obs = ((self.snake.x - self.food.x, self.snake.y - self.food.y), self.left, self.right, self.up, self.down, self.snake.dir)  # index of current movement
+                if np.random.random() > EPS:
+                    self.action = np.argmax(self.qTable[self.obs])                 # max index
+
+                else:
+                    self.action = np.random.randint(0, 4)
+
+                self.snake.act(self.action)
+                if self.snake.x == self.food.x and self.snake.y == self.food.y:
+                    self.snake.ate = True
+                    self.food.changePos()
+                    self.R = EAT_REWARD
+                    self.inside = False
+                    self.isInside()
+
+                else:
+                    self.R = 0
+                    for part in self.snake.body:
+                        if part == (self.snake.x, self.snake.y) and part is not self.snake.body[0]:
+                            self.R = -LOSE_PENALTY
+                            self.suicides += 1
                             break
 
-            else:
-                reward = 0
-                for part in python.body:
-                    if part == (python.x, python.y) and part is not python.body[0]:
-                        reward = -LOSE_PENALTY
-                        suicides += 1
+                    if self.R == 0:
+                        self.R = -MOVE_PENALTY
+                #
+                self.observation_ = ((self.snake.x - self.food.x, self.snake.y - self.food.y), self.left, self.right, self.up, self.down, self.snake.dir)
+                self.qPredict = np.max(self.qTable[self.observation_])
+                self.qTarget = self.qTable[self.obs][self.action]
+                if self.R == EAT_REWARD:
+                    self.q_ = EAT_REWARD
 
-                        break
+                else:
+                    self.q_ = (1 - LEARNING_RATE) * self.qTarget + LEARNING_RATE * (self.R + DISCOUNT * self.qPredict)
+                self.qTable[self.obs][self.action] = self.q_
+                pg.event.get()
+                # draw
+                if self.render:
+                    self.clock.tick(FPS)
+                    self.screen.fill((255, 255, 255))
+                    self.snake.draw(self.screen)
+                    self.food.draw(self.screen)  
+                    pg.display.update()
+                self.epochRew += self.R
+                if self.R == -LOSE_PENALTY:
+                    break
 
-                if reward == 0:
-                    reward = -MOVE_PENALTY
-            newObservation = ((python.x - food.x, python.y - food.y), leftB, rightB, upB, downB, python.dir)
-            maxFutureQ = np.max(qTable[newObservation])
-            currentQ = qTable[obs][action]
-            if reward == EAT_REWARD:
-                newQ = EAT_REWARD
+            if self.render:
+                print(f"snake length {len(self.snake.body) - 2}, did suicides: {self.suicides}")
+                # slow down
+                #if len(snake.body) > 20:
+                    #FPS = 10
+            if self.currentMean > self.bestMean:
+                self.bestQTable = self.qTable
+                self.bestMean = self.currentMean
 
-            else:
-                newQ = (1 - LEARNING_RATE) * currentQ + LEARNING_RATE * (reward + DISCOUNT * maxFutureQ)
-            qTable[obs][action] = newQ
-            pg.event.get()
+            self.epochRs.append(self.epochRew)
+            EPS *= EPS_DECAY
 
-            if render:
-                clock.tick(FPS)
-    
-                screen.fill((255, 255, 255))
-    
-                python.draw(screen)
-                food.draw(screen)  
-                pg.display.update()
-            epochRew += reward
-            if reward == -LOSE_PENALTY:
-                break
+        pg.quit()
 
-        if render:
-            print(f"snake length {len(python.body) - 2}, did suicide: {suicides}")
+if __name__ == "__main__":
 
-            if len(python.body) > 20:
-                FPS = 10
-        if currentMean > bestMean:
-            bestQTable = qTable
-            bestMean = currentMean
+    world = World()
+    world.initQTable()
+    world.run()
 
-        epochRewards.append(epochRew)
-        EPS *= EPS_DECAY
-
-    pg.quit()
